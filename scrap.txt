@@ -1,0 +1,57 @@
+// old asm
+//     .main
+//     nop
+//     addq %rax, %rbx
+//     jmple .L0
+// .L0
+//     call .main
+
+// print nth element
+// std::cout << (int) bigArray.at(0);
+
+// vector<int> replaceIndexes 
+// unordered_map<std::string, std::function<byte[](string)>> funcMap;
+// //ccmovq
+// //rrmovq
+// //cmovle 
+
+// funcMap["halt"] = halt;
+// funcMap["nop"] = nop;
+// funcMap[""]
+
+
+
+// FunctionPointer fps[3] = {};
+
+// movrm rA rB whatever
+// encoding: [typeByte] [either fn | 0] [rA] [rB] 
+
+// read the instruction
+// convert it to an array index
+// fps[]
+
+// const file = fs.readdrSync('./file.s');
+
+// for(let i = 0; i < file.readLine(); i++){
+//     const split = file.split(' ');
+
+//     // O(n)
+//     // if(type == 0){
+//     //     // do something
+//     // } else if(type === 1){
+//     // }
+
+//     // movq rax
+//     const type = split[0];// movq
+//     map[type](...split.slice(1));
+// }
+
+// const map = [
+//     () => {
+//         // do one thing
+//     },
+//     () => {
+//         // do another thing
+//         subMap[]();
+//     }
+// ]

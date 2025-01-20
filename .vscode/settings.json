@@ -53,6 +53,7 @@
         "list": "cpp",
         "string": "cpp",
         "vector": "cpp",
-        "xhash": "cpp"
+        "xhash": "cpp",
+        "functional": "cpp"
     }
 }

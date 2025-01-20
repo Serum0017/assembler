@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cstring>
+#include <functional>
 using namespace std;
 
 std::vector<std::string> split(std::string& s, const std::string& delimiter) {
@@ -19,6 +20,7 @@ std::vector<std::string> split(std::string& s, const std::string& delimiter) {
 
     return tokens;
 }
+
 
 bool completed = false;
 unordered_map<string, byte> registerMap = {};
@@ -69,6 +71,60 @@ byte getFnFromSuffix(string suffix) {
     return suffixMap[suffix];
 }
 
+bool declaredcommandToEncodingMap = false;
+unordered_map<string, int> commandToEncodingMap = {}; 
+int commandToEncoding(string command) {
+    if(declaredcommandToEncodingMap == false){
+        declaredcommandToEncodingMap == true;
+        
+        commandToEncodingMap["ha"] = 0;
+        commandToEncodingMap["no"] = 1;
+        commandToEncodingMap["rr"] = 2;
+        commandToEncodingMap["cm"] = 2;
+        commandToEncodingMap["ir"] = 3;
+        commandToEncodingMap["rm"] = 4;
+        commandToEncodingMap["mr"] = 5;
+        commandToEncodingMap["ad"] = 6;
+        commandToEncodingMap["su"] = 6;
+        commandToEncodingMap["an"] = 6;
+        commandToEncodingMap["xo"] = 6;
+        commandToEncodingMap["ca"] = 8;
+        commandToEncodingMap["re"] = 9;
+        commandToEncodingMap["pu"] = 10;
+        commandToEncodingMap["po"] = 11;
+    }
+    if(command.substr(0,1)=="j"){
+        return 7;
+    }
+    return commandToEncodingMap[command.substr(0,2)];
+}
+
+bool declaredEncodingToLenMap = false;
+unordered_map<int, int> encodingToLenMap = {};
+int encodingToLen(int encoding) {
+    if(declaredEncodingToLenMap == false){
+        declaredEncodingToLenMap = true;
+        
+        encodingToLenMap[0] = 1;
+        encodingToLenMap[1] = 1;
+        encodingToLenMap[2] = 2;
+        encodingToLenMap[3] = 10;
+        encodingToLenMap[4] = 10;
+        encodingToLenMap[5] = 10;
+        encodingToLenMap[6] = 2;
+
+        encodingToLenMap[7] = 9;
+        encodingToLenMap[8] = 9;
+        encodingToLenMap[9] = 1;
+        encodingToLenMap[10] = 2;
+        encodingToLenMap[11] = 2;
+    }
+
+    return encodingToLenMap[encoding];
+}
+
+
+
 bool inittedHexMap = false;
 unordered_map<char, int> hexMap = {};
 long long parseHex(string s){
@@ -100,22 +156,29 @@ long long parseHex(string s){
 
     long d = 0;
     int exp = 0;
-    for(int i = s.size()-1; i >= 0; i--){
+
+    int stopAt = 0;
+    bool isNegative = s.at(0) == '-'; 
+    if(isNegative){
+        // negative
+        stopAt = 1;
+    }
+
+    for(int i = s.size()-1; i >= stopAt; i--){
         d += ((long long) hexMap[s.at(i)]) << exp;// raising to 2^exp = 2^(4*hex) which is right
         exp += 4;
     }
+
+    if(isNegative){
+        d *= -1;
+    }
+    
     return d;
 }
 
 byte getNthByte(long long d, int n){
     return (byte) ( ( d >> (8*n) ) & 0xFF );
     // return d >> ( (double)8 * n);
-}
-
-// untested
-byte writeRightHalfByte(byte b, int i){
-    b = b | ((byte) (i & 0xF));
-    return b;
 }
 
 byte joinByte(byte b, byte i){
@@ -126,12 +189,6 @@ byte joinByte(byte b, byte i){
     return (b<<4) | i;
 }
 
-// untested
-byte writeLeftHalfByte(byte b, int i){
-    b = b | ((byte) ((i & 0xF) << 4));
-    return b;
-}
-
 typedef void(*FunctionPointer)();
 
 // void pushArray(int curIndex, std::vector<byte> bigArray){
@@ -139,17 +196,17 @@ typedef void(*FunctionPointer)();
 // }
 
 // half, nop, cmovXX, irmovq, rmmovq, mrmovq, OPq, jXX, call, ret, pushq, popq
-void halt(string& line, std::vector<byte>& bigArray) {
+void halt(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations) {
     bigArray.push_back((byte) 0);}
 
-void nop(string& line, std::vector<byte>& bigArray) {
+void nop(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations) {
     bigArray.push_back((byte) 16);
 }
 
 // cmovX rA, rB
 // encoding: 2 | fn | rA | rB
 // rrmovq
-void cmovXX(string line, std::vector<byte>& bigArray){
+void cmovXX(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
     // example: cmovle %rax, %rbx 
     // 2 | fn
     std::vector<string> splitLine = split(line, " ");// [cmovle, rax, rbx]
@@ -163,13 +220,14 @@ void cmovXX(string line, std::vector<byte>& bigArray){
 
     bigArray.push_back(firstByte);
 
-    byte rAind = registerToVal(splitLine.at(1));
+    string r1 = splitLine.at(1);
+    byte rAind = registerToVal(r1.substr(0,r1.length() - 1));
     byte rBind = registerToVal(splitLine.at(2));
     
     bigArray.push_back(joinByte(rAind, rBind));
 }
 
-void irmovq(string line, std::vector<byte>& bigArray){
+void irmovq(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
     // 3 | 0, F | rB, | [long] V (in little endian order)
 
     // irmovq $0xabcd, %rdx
@@ -200,7 +258,7 @@ void irmovq(string line, std::vector<byte>& bigArray){
     }
 }
 
-void rmmovq(string line, std::vector<byte>& bigArray){
+void rmmovq(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
     // rmmovq %rsp, 0x41c(%rbx)
     // 4 | 0, rA | rB, [long] D
 
@@ -231,120 +289,243 @@ void rmmovq(string line, std::vector<byte>& bigArray){
     }
 }
 
-/** 
-void call(string line, std::vector<byte> bigArray, dynamicHashMap replaceMap) {
-    bigArray.push_back((byte) 8);
-    bigArray.push_back((byte) 0);
-    // int -> string
-    // location -> name
+void mrmovq(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    // mrmovq 0x41c(%rbp), %rcx
+    // 5 | 0, rA | rB, [long] D
 
-    // myFunction -> [0x1234AB]
-    // supports [name] -> [vectorLocation] 
-    string[] splitLine = line.
-    replaceMap[line.]
+    // 5 | 0
+    bigArray.push_back(joinByte((byte) 5, (byte) 0));
+
+    std::vector<string> splitLine = split(line, " ");
+    
+    // 0x41c(%rbp) -> [0x41c, %rbp)]
+    std::vector<string> split2 = split(splitLine.at(1), "(");
+    string uncleanr1 = split2.at(1);// removing the ), at the end
+    byte rBind = registerToVal(uncleanr1.substr(0, uncleanr1.size()-2));
+    
+    byte rAind = registerToVal(splitLine.at(2));
+    
+    // rA | rB
+    bigArray.push_back(joinByte(rAind, rBind));
+
+    long long d = parseHex(split2.at(0));// 0x41c is split2.at(0)
+
+    // same as irmovq, [long] D
+    for(int i = 0; i < 8; i++){
+        bigArray.push_back(
+            getNthByte(d, i)
+        );
+    }
 }
 
-void ret(string line, std::vector<byte> bigArray) {
-    bigArray.push_back((byte) 9);
-    bigArray.push_back((byte) 0);
+void opQ(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    std::vector<string> splitLine = split(line, " ");
+    byte fnByte = (byte) 0;
+    if(splitLine.at(0)=="subq"){
+        fnByte = (byte) 1;
+    }
+    else if(splitLine.at(0)=="andq"){
+        fnByte = (byte) 2;
+    }
+    else if(splitLine.at(0)=="xorq"){
+        fnByte = (byte) 3;
+    }
+    bigArray.push_back(joinByte((byte) 6, fnByte));
+    
+    string r1 = splitLine.at(1);
+    byte rAind = registerToVal(r1.substr(0,r1.length() - 1));
+    byte rBind = registerToVal(splitLine.at(2));
+    
+    bigArray.push_back(joinByte(rAind, rBind));
+
 }
 
-void pushq(string line, std::vector<byte> bigArray) {
-    bigArray.push_back((byte) 0xA);
-    bigArray.push_back((byte) 0);
-    // raA, F
+void call(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    std::vector<string> splitLine = split(line, " ");
+    bigArray.push_back(joinByte((byte) 8, (byte) 0));
+    
+    int fnLocation = fnjmpLocations[splitLine.at(1)];
+    for(int i = 0; i<8; i++){
+        bigArray.push_back(
+            getNthByte(fnLocation,i)
+        );
+    }
 }
 
-//https://spcs.instructure.com/courses/8654/files/1593217?module_item_id=212606
+void jmp(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    // jmp rA
+    // 7 | fn, [double] dest
+    std::vector<string> splitLine = split(line, " ");
+    
+    bigArray.push_back(joinByte((byte) 7, getFnFromSuffix(splitLine.at(0).substr(1,splitLine.at(0).length()))));
 
-void movrm(string line, std::vector<byte> bigArray){
-
+    int jumpLocation = fnjmpLocations[splitLine.at(1)];
+    
+    for(int i = 0; i<8; i++){
+        bigArray.push_back(
+            getNthByte(jumpLocation,i)
+        );
+    }
+    
 }
 
-void call(string line){
-    byte* arr = new byte[2];
-    arr[0] = (byte) 0;
-    arr[1] = (byte) 0;
-    return arr;
+void ret(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    bigArray.push_back(joinByte((byte) 9, (byte) 0));
 }
-*/
+
+void pushq(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    // pushq %rax
+    // encoding: A | 0, rA | F
+    bigArray.push_back(joinByte((byte) 10, (byte) 0));// 10 = A
+
+    // rA | F
+    string rA = split(line, " ").at(1);
+    byte rAind = registerToVal(rA);
+    bigArray.push_back(joinByte(rAind, (byte) 0b1111) );
+}
+
+void popq(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fnjmpLocations){
+    bigArray.push_back(joinByte((byte) 11, (byte) 0));// 11 = B
+    
+    string rA = split(line, " ").at(1);
+    byte rAind = registerToVal(rA);
+    bigArray.push_back(joinByte(rAind, (byte) 0b1111) );
+}
+
 
 // TO COMPILE AND RUN:
-// g++ main.cpp -o compiled ; ./compiled
+// g++ main.cpp -o compiled ; ./com0piled
 
 int main() {
     // std::string myString = "Hello, World!";
     // std::cout << myString << std::endl;
-    std::vector<byte> bigArray = {};
     // cmovXX("cmovl %rax %r14", bigArray);
     // irmovq("irmovq $0xabcd, %rdx", bigArray);
     // rmmovq("rmmovq %rsi, 0x41c(%rsp)", bigArray);
+    
+    unordered_map<string, int> fnjmpLocations = {};
+
+    // PASS 1 - getting the indicies and putting them in the function LUT
+    int byteIndex = 0;
+    std::ifstream assembly_code;
+    assembly_code.open("file.s");
+    string line;
+    if(assembly_code.is_open()){
+        while(std::getline(assembly_code, line))
+        {
+            vector<string> splits = split(line,"    ");
+            string lineWithoutTabs = splits.at(splits.size() - 1);
+
+            if(lineWithoutTabs.substr(lineWithoutTabs.length() - 1, 1) == ":"){
+                string withoutTheColon = lineWithoutTabs.substr(0, lineWithoutTabs.length() - 1);
+                fnjmpLocations[withoutTheColon] = byteIndex;
+                continue;
+            }
+
+            if(lineWithoutTabs.substr(0, 1) == "."){
+                // assembler directive.
+                string firstBit = lineWithoutTabs.substr(0, 4);
+                vector<string> splitLine = split(lineWithoutTabs, " ");
+                if(firstBit == ".pos"){
+                    byteIndex = parseHex(splitLine.at(1));
+                } else if(firstBit == ".qua"){
+                    byteIndex += 8;
+                } else if(firstBit == ".ali"){
+                    int alignTo = parseHex(splitLine.at(1));
+                    while(byteIndex % alignTo != 0){
+                        byteIndex++;
+                    }
+                }
+                continue;
+            }
+            
+            if(lineWithoutTabs.substr(0,1)=="#"){
+                continue;
+            }
+
+            byteIndex += encodingToLen(commandToEncoding(lineWithoutTabs));
+        }
+    }
+
+    std::unordered_map<int, std::function<void(string line, std::vector<byte>&, unordered_map<string,int>&)>> encodingToConversionFn;
+    encodingToConversionFn[0] = halt;
+    encodingToConversionFn[1] = nop; 
+    encodingToConversionFn[2] = cmovXX;
+    encodingToConversionFn[3] = irmovq;
+    encodingToConversionFn[4] = rmmovq;
+    encodingToConversionFn[5] = mrmovq;
+    encodingToConversionFn[6] = opQ;
+    encodingToConversionFn[7] = jmp;
+    encodingToConversionFn[8] = call;
+    encodingToConversionFn[9] = ret;
+    encodingToConversionFn[10] = pushq;
+    encodingToConversionFn[11] = popq;
+    
+
+    std::vector<byte> bigArray = {};
+
+    unordered_map<string, int> loc = {};
+    
+    std::ifstream assembly_code_reopen;
+    assembly_code_reopen.open("file.s");
+    byteIndex = 0;
+    if(assembly_code_reopen.is_open()){
+        while(std::getline(assembly_code_reopen, line)){
+            // cout << line << '\n';
+
+            // [empty line] or
+            // [tab]
+            vector<string> splits = split(line,"    ");
+            string lineWithoutTabs = splits.at(splits.size() - 1);
+
+            if(lineWithoutTabs.length() == 0){
+                continue;
+            }
+
+            if(lineWithoutTabs.substr(0, 1) == "."){
+                // assembler directive.
+                string firstBit = lineWithoutTabs.substr(0, 4);
+                vector<string> splitLine = split(lineWithoutTabs, " ");
+                if(firstBit == ".pos"){
+                    byteIndex = parseHex(splitLine.at(1));
+                    for(int i = 0; i < byteIndex; i++){
+                        bigArray.push_back((byte) 0);
+                    }
+                } else if(firstBit == ".qua"){
+                    long long data = parseHex(splitLine.at(1));
+                    for(int i = 0; i < 8; i++){
+                        bigArray.push_back(getNthByte(data, i));
+                    }
+                    byteIndex += 8;
+                } else if(firstBit == ".ali"){
+                    int alignTo = parseHex(splitLine.at(1));
+                    while(byteIndex % alignTo != 0){
+                        bigArray.push_back((byte) 0);
+                        byteIndex++;
+                    }
+                }
+                continue;
+            }
+
+            if(lineWithoutTabs.substr(lineWithoutTabs.length() - 1, 1) == ":"){
+                // string withoutTheColon = lineWithoutTabs.substr(0, lineWithoutTabs.length() - 1);
+                // addLabel();// loop:
+                continue;
+            }
+            
+            int encoding = commandToEncoding(lineWithoutTabs);
+            
+            encodingToConversionFn[encoding](line, bigArray, fnjmpLocations);
+            byteIndex += encodingToLen(commandToEncoding(lineWithoutTabs));
+        }
+        assembly_code.close();
+    }
 
     // log bigArray
     cout << "bigArray Contents:\n" << std::hex;
     for (auto& el : bigArray) {
-        std::cout << (int) el << std::hex << std::endl;
+        std::cout << (int) el << " ";
     }
-
-    // print nth element
-    // std::cout << (int) bigArray.at(0);
-
-    // vector<int> replaceIndexes 
-    // unordered_map<std::string, std::function<byte[](string)>> funcMap;
-    // //ccmovq
-    // //rrmovq
-    // //cmovle 
-
-    // funcMap["halt"] = halt;
-    // funcMap["nop"] = nop;
-    // funcMap[""]
-
-    // std::ifstream assembly_code;
-    // assemblyCode.open("file.s");
-    // string line;
-    // if(assemblyCode.is_open()){
-    //     while(std::getline(assemblyCode, line)){
-    //         cout << line << '\n';
-    //     }
-    //     assemblyCode.close();
-    // }
-
-
-
-    // FunctionPointer fps[3] = {};
-
-    // movrm rA rB whatever
-    // encoding: [typeByte] [either fn | 0] [rA] [rB] 
-
-    // read the instruction
-    // convert it to an array index
-    // fps[]
-
-    // const file = fs.readdrSync('./file.s');
-
-    // for(let i = 0; i < file.readLine(); i++){
-    //     const split = file.split(' ');
-
-    //     // O(n)
-    //     // if(type == 0){
-    //     //     // do something
-    //     // } else if(type === 1){
-    //     // }
-
-    //     // movq rax
-    //     const type = split[0];// movq
-    //     map[type](...split.slice(1));
-    // }
-
-    // const map = [
-    //     () => {
-    //         // do one thing
-    //     },
-    //     () => {
-    //         // do another thing
-    //         subMap[]();
-    //     }
-    // ]
     
     return 0;
 }
