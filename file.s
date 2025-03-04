@@ -1,20 +1,32 @@
-.pos 0x999
-main:
-    nop
+.pos 0x4
+test:
     halt
-    cmovl %rax, %r14
-    irmovq $0xabcd, %rdx
-    rmmovq %rsi, 0x41c(%rsp)
-    mrmovq -0x41c(%rsi), %rsp
-L0:
-    xorq %rbp, %r14
-    jle .L1
-    jmp .L0
-    call .L0
-    addq %rsi, %rdi 
-    subq %rsi, %rdi
-    andq %rsi, %rdi
+    nop
+    rrmovq %rax, %rcx
+    cmovle %rdx, %rbx
+    cmovl %rsp, %rbp 
+    cmove %rsi, %rdi
+    cmovne %r8, %r9
+    cmovge %r10, %r11
+    cmovg %r12, %r13
+    irmovq $0x100, %r14
+    mrmovq 0x8(%rax), %rax
+    rmmovq %rax 0x16(%rax)
+    addq %rax, %rax
+    subq %rax, %rax
+    xorq %rax, %rax
+    andq %rax, %rax
+    jmp .test2
+    jmpl .test2
+    jmple .test2
+    jmpg .test2
+    jmpge .test2
+    jmpn .test2
+    jmpne .test2
+    call .test2
+    ret
     pushq %rax
     popq %rax
-    ret
-L1:
+test2:
+    .align 0x8
+    .quad 0x8

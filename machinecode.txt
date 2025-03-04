@@ -1,0 +1,125 @@
+.pos 0x4
+test:
+    halt
+    nop
+
+    rrmovq %rax, %rcx
+    cmovle %rsp, %rbp
+    cmovl %rdx, %rbx 
+    cmove %rsi, %rdi
+    cmovne %r8, %r9
+    cmovge %r10, %r11
+    cmovg %r12, %r13
+
+    irmovq $0x100, %r14
+    mrmovq 0x8(%rax), %rax
+    rmmovq %rax 0x16(%rax)
+
+    addq %rax, %rax
+    subq %rax, %rax
+    xorq %rax, %rax
+    andq %rax, %rax
+
+    jmp .test2
+    jmpl .test2
+    jmple .test2
+    jmpg .test2
+    jmpge .test2
+    jmpn .test2
+    jmpne .test2
+
+    call .test2
+
+    ret
+
+    pushq %rax
+
+    popq %rax
+test2:
+    .align 0x8
+    .quad 0x8
+
+0 0 0 0
+
+0 10
+
+20 1
+21 23
+22 45
+23 67
+24 89
+25 AB
+26 CD
+   
+30 FE 0 0 1 0 0 0 0 0 
+50 0 8 0 0 0 0 0 0 0 
+40 0 16 0 0 0 0 0 0 0
+
+60 0
+61 0
+63 0
+62 0
+
+70 7D 0 0 0 0 0 0 0
+71 7D 0 0 0 0 0 0 0
+72 7D 0 0 0 0 0 0 0
+73 7D 0 0 0 0 0 0 0
+74 7D 0 0 0 0 0 0 0
+75 7D 0 0 0 0 0 0 0
+76 7D 0 0 0 0 0 0 0
+
+80 7D 0 0 0 0 0 0
+
+90
+
+A0 0
+B0 0
+
+0 0
+0 0 0 0 0 0 0 8
+ - 126
+
+
+//Actual code
+0 0 0 0 
+0 10 
+20 1 
+21 23 
+22 45 
+23 67 
+24 89 
+25 ab 
+26 cd 
+
+
+30 fe 0 1 0 0 0 0 0 0 
+
+50 0 8 0 0 0 0 0 0 0
+40 0 16 0 0 0 0 0 0 0
+
+60 0 
+61 0 
+63 0 
+62 0 
+
+70 0 0 0 0 0 0 0 0 
+70 0 0 0 0 0 0 0 0 
+70 0 0 0 0 0 0 0 0 
+70 0 0 0 0 0 0 0 0 
+70 0 0 0 0 0 0 0 0 
+70 0 0 0 0 0 0 0 0 
+70 0 0 0 0 0 0 0 0 
+
+80 0 0 0 0 0 0 0 0 
+90 
+a0 f 
+b0 f 
+
+
+0 8 0
+                                                                                                                                                                     0 0 0 0 0 0 0                                                                                                                                                               0 0 0 0 0 0 0                                                                                                                                                                0 0 0 0 0 0 0
+
+Allow empty lines 
+jmp is completely broken 
+call addressing is broken
+something is weird with .align and .quad

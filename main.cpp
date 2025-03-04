@@ -413,6 +413,8 @@ int main() {
     if(assembly_code.is_open()){
         while(std::getline(assembly_code, line))
         {
+            if(line.length() == 0) continue;
+            
             vector<string> splits = split(line,"    ");
             string lineWithoutTabs = splits.at(splits.size() - 1);
 
@@ -471,6 +473,7 @@ int main() {
     byteIndex = 0;
     if(assembly_code_reopen.is_open()){
         while(std::getline(assembly_code_reopen, line)){
+            if(line.length() == 0) continue;
             // cout << line << '\n';
 
             // [empty line] or
