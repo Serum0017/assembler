@@ -2,9 +2,6 @@
 test:
     halt
     nop
-
-
-
     rrmovq %rax, %rcx
     cmovle %rdx, %rbx
     cmovl %rsp, %rbp 
@@ -15,8 +12,6 @@ test:
     irmovq $0x100, %r14
     mrmovq 0x8(%rax), %rax
     rmmovq %rax 0x16(%rax)
-
-
     addq %rax, %rax
     subq %rax, %rax
     xorq %rax, %rax
@@ -33,9 +28,5 @@ test:
     pushq %rcx
     popq %rcx
 test2:
-
-
     .align 0x8
     .quad 0x8
-
-
