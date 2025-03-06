@@ -164,6 +164,15 @@ long long parseHex(string s){
         stopAt = 1;
     }
 
+    //remove 0x, if it exists
+    std::vector<string> split1 = split(s, "x");
+    if(split1.size()>1){
+        s=split1.at(split1.size()-1);
+    }
+    else{
+        s = split1.at(0);
+    }
+
     for(int i = s.size()-1; i >= stopAt; i--){
         d += ((long long) hexMap[s.at(i)]) << exp;// raising to 2^exp = 2^(4*hex) which is right
         exp += 4;
@@ -186,7 +195,7 @@ byte joinByte(byte b, byte i){
     // byte i
     // ->
     // b | i in a single byte (last 4 positions of each should be 0)
-    return (b<<4) | i;
+    return (byte) ((((long) b)<<4) | (long) i);
 }
 
 typedef void(*FunctionPointer)();
@@ -301,7 +310,7 @@ void mrmovq(string line, std::vector<byte>& bigArray, unordered_map<string,int>&
     // 0x41c(%rbp) -> [0x41c, %rbp)]
     std::vector<string> split2 = split(splitLine.at(1), "(");
     string uncleanr1 = split2.at(1);// removing the ), at the end
-    byte rBind = registerToVal(uncleanr1.substr(0, uncleanr1.size()-2));
+    byte rBind = registerToVal(uncleanr1.substr(0, uncleanr1.size()-1));
     
     byte rAind = registerToVal(splitLine.at(2));
     
@@ -357,7 +366,7 @@ void jmp(string line, std::vector<byte>& bigArray, unordered_map<string,int>& fn
     // 7 | fn, [double] dest
     std::vector<string> splitLine = split(line, " ");
     
-    bigArray.push_back(joinByte((byte) 7, getFnFromSuffix(splitLine.at(0).substr(1,splitLine.at(0).length()))));
+    bigArray.push_back(joinByte((byte) 7, getFnFromSuffix(splitLine.at(0).substr(1,splitLine.at(0).length()-1))));
 
     int jumpLocation = fnjmpLocations[splitLine.at(1)];
     
@@ -413,11 +422,19 @@ int main() {
     if(assembly_code.is_open()){
         while(std::getline(assembly_code, line))
         {
-            if(line.length() == 0) continue;
+            if(line.length() == 0) {
+                continue;
+            }
             
+            if((int)line.at(line.length()-1)==13){
+                line = line.substr(0,line.size()-1); //Remove carridge return
+            }
+            if(line.length() == 0){
+                continue; //Check if string is only newline
+            }
             vector<string> splits = split(line,"    ");
             string lineWithoutTabs = splits.at(splits.size() - 1);
-
+            
             if(lineWithoutTabs.substr(lineWithoutTabs.length() - 1, 1) == ":"){
                 string withoutTheColon = lineWithoutTabs.substr(0, lineWithoutTabs.length() - 1);
                 fnjmpLocations[withoutTheColon] = byteIndex;
@@ -429,7 +446,7 @@ int main() {
                 string firstBit = lineWithoutTabs.substr(0, 4);
                 vector<string> splitLine = split(lineWithoutTabs, " ");
                 if(firstBit == ".pos"){
-                    byteIndex = parseHex(splitLine.at(1));
+                    byteIndex = parseHex(splitLine.at(1)); 
                 } else if(firstBit == ".qua"){
                     byteIndex += 8;
                 } else if(firstBit == ".ali"){
@@ -474,6 +491,12 @@ int main() {
     if(assembly_code_reopen.is_open()){
         while(std::getline(assembly_code_reopen, line)){
             if(line.length() == 0) continue;
+            
+            if((int)line.at(line.length()-1)==13){
+                line = line.substr(0,line.size()-1); //Remove carridge return
+            }
+
+            if(line.length() == 0) continue; //Check if line is only newline
             // cout << line << '\n';
 
             // [empty line] or
@@ -490,6 +513,7 @@ int main() {
                 string firstBit = lineWithoutTabs.substr(0, 4);
                 vector<string> splitLine = split(lineWithoutTabs, " ");
                 if(firstBit == ".pos"){
+                    
                     byteIndex = parseHex(splitLine.at(1));
                     for(int i = 0; i < byteIndex; i++){
                         bigArray.push_back((byte) 0);
