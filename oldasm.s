@@ -1,4 +1,6 @@
 main:
+    addq %rax, 10
+    addq %rbx, 8
     nop
     cmovl %rax, %r14
     irmovq $0xabcd, %rdx
@@ -6,9 +8,9 @@ main:
     mrmovq -0x41c(%rsi), %rsp
 L0:
     xorq %rbp, %r14
-    jle .L1
-    jmp .L0
-    call .L0
+    jle L1
+    jmp L0
+    call L0
     addq %rsi, %rdi 
     subq %rsi, %rdi
     andq %rsi, %rdi

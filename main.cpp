@@ -154,15 +154,19 @@ long long parseHex(string s){
         hexMap['F'] = 15;
     }
 
-    long d = 0;
+    long long d = 0;
     int exp = 0;
 
     int stopAt = 0;
-    bool isNegative = s.at(0) == '-'; 
+    bool isNegative = s.at(0) == '-';
     if(isNegative){
         // negative
         stopAt = 1;
     }
+
+    // cout << s << "\n";
+
+    // cout << (int )isNegative << "\n";
 
     //remove 0x, if it exists
     std::vector<string> split1 = split(s, "x");
@@ -172,6 +176,8 @@ long long parseHex(string s){
     else{
         s = split1.at(0);
     }
+
+    // std::cout << "str" << s << "\n";
 
     for(int i = s.size()-1; i >= stopAt; i--){
         d += ((long long) hexMap[s.at(i)]) << exp;// raising to 2^exp = 2^(4*hex) which is right
@@ -186,7 +192,8 @@ long long parseHex(string s){
 }
 
 byte getNthByte(long long d, int n){
-    return (byte) ( ( d >> (8*n) ) & 0xFF );
+
+    return (byte) ( ( (unsigned long long) d >> (8*n) ) & 0xFF );
     // return d >> ( (double)8 * n);
 }
 
@@ -260,7 +267,9 @@ void irmovq(string line, std::vector<byte>& bigArray, unordered_map<string,int>&
     // cout << std::hex << d << "\n";
 
     // this is already in little endian because the least significant byte is stored first.
+    // cout << d << "\n";
     for(int i = 0; i < 8; i++){
+        // cout << i << (int) getNthByte(d, i) << "\n";
         bigArray.push_back(
             getNthByte(d, i)
         );
@@ -310,9 +319,9 @@ void mrmovq(string line, std::vector<byte>& bigArray, unordered_map<string,int>&
     // 0x41c(%rbp) -> [0x41c, %rbp)]
     std::vector<string> split2 = split(splitLine.at(1), "(");
     string uncleanr1 = split2.at(1);// removing the ), at the end
-    byte rBind = registerToVal(uncleanr1.substr(0, uncleanr1.size()-1));
+    byte rAind = registerToVal(uncleanr1.substr(0, uncleanr1.size()-2));
     
-    byte rAind = registerToVal(splitLine.at(2));
+    byte rBind = registerToVal(splitLine.at(2));
     
     // rA | rB
     bigArray.push_back(joinByte(rAind, rBind));
@@ -437,6 +446,7 @@ int main() {
             
             if(lineWithoutTabs.substr(lineWithoutTabs.length() - 1, 1) == ":"){
                 string withoutTheColon = lineWithoutTabs.substr(0, lineWithoutTabs.length() - 1);
+                // cout << "setting fnJMP Locations\n" << withoutTheColon << "\n" << byteIndex << "\n";
                 fnjmpLocations[withoutTheColon] = byteIndex;
                 continue;
             }
